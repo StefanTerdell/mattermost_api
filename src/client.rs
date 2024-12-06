@@ -10,6 +10,8 @@ use reqwest::{
 };
 use serde::de::DeserializeOwned;
 use serde_json::json;
+use std::time::Duration;
+use tokio::{task::JoinHandle, time::sleep};
 use url::Url;
 
 /// Authentication data, either a login_id and password
@@ -21,7 +23,7 @@ use url::Url;
 ///
 /// For more information, see the
 /// [Mattermost docs](https://api.mattermost.com/#tag/authentication).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AuthenticationData {
     pub(crate) login_id: Option<String>,
     pub(crate) password: Option<String>,
@@ -63,7 +65,7 @@ impl AuthenticationData {
 /// Struct to interact with a Mattermost instance API.
 ///
 /// Use the `new` function to create an instance of this struct.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Mattermost {
     pub(crate) instance_url: Url,
     pub(crate) authentication_data: AuthenticationData,
@@ -286,7 +288,7 @@ impl Mattermost {
     /// ```
     pub async fn connect_to_websocket<H: WebsocketHandler + 'static>(
         &mut self,
-        handler: H,
+        handler: &H,
     ) -> Result<(), ApiError> {
         let url = self.ws_instance_url()?.join("websocket")?;
         let (mut stream, _response) = async_tungstenite::tokio::connect_async(url)
@@ -306,11 +308,29 @@ impl Mattermost {
         self.receive_events(stream, handler).await
     }
 
+    /// connect_to_websocket but consuming self and looping endlessly on errors
+    pub fn with_reconnection<H: WebsocketHandler + 'static>(
+        mut self,
+        handler: H,
+    ) -> JoinHandle<()> {
+        tokio::spawn({
+            async move {
+                loop {
+                    if let Err(err) = self.connect_to_websocket(&handler).await {
+                        error!("Websocket error: {err:?}");
+                    }
+
+                    sleep(Duration::from_secs(5)).await;
+                }
+            }
+        })
+    }
+
     #[cfg(not(feature = "ws-keep-alive"))]
     async fn receive_events<H: WebsocketHandler + 'static>(
         &self,
         mut stream: WebSocketStream<ConnectStream>,
-        handler: H,
+        handler: &H,
     ) -> Result<(), ApiError> {
         loop {
             if let Some(event) = stream.next().await {
@@ -319,7 +339,7 @@ impl Mattermost {
                     ApiError::WebsocketError(Box::new(err))
                 })?;
 
-                if self.handle_event(&handler, event).await? {
+                if self.handle_event(handler, event).await? {
                     break;
                 }
             }
@@ -332,7 +352,7 @@ impl Mattermost {
     async fn receive_events<H: WebsocketHandler + 'static>(
         &self,
         mut stream: WebSocketStream<ConnectStream>,
-        handler: H,
+        handler: &H,
     ) -> Result<(), ApiError> {
         let mut ping_interval = tokio::time::interval(self.ping_interval);
 
@@ -344,7 +364,7 @@ impl Mattermost {
                         ApiError::WebsocketError(Box::new(err))
                     })?;
 
-                    if self.handle_event(&handler, event).await? {
+                    if self.handle_event(handler, event).await? {
                         break;
                     }
                 },
@@ -404,6 +424,17 @@ impl Mattermost {
     pub async fn get_team(&self, id: &str) -> Result<models::TeamInformation, ApiError> {
         self.query("GET", &format!("teams/{}", id), None, None)
             .await
+    }
+
+    /// Get users of a channel
+    pub async fn get_channel_users(&self, channel_id: &str) -> Result<Vec<models::User>, ApiError> {
+        self.query(
+            "GET",
+            "users",
+            Some(&[("in_channel", channel_id), ("per_page", "300")]),
+            None,
+        )
+        .await
     }
 
     /// Get information for a team by its name,
