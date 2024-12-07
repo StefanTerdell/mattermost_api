@@ -2,7 +2,10 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde_json::Value;
+use std::{collections::HashMap, sync::Arc};
+
+use crate::models::Post;
 
 /// Websocket event broadcast information
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,10 +23,9 @@ pub struct WebsocketEventBroadcast {
 /// Event data from the websocket API
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebsocketEvent {
-    /// Event type
-    pub event: String,
-    /// Event data
-    pub data: serde_json::Value,
+    /// Event type and data
+    #[serde(flatten)]
+    pub event: WebsocketEventType,
     /// Event recipient information
     pub broadcast: WebsocketEventBroadcast,
     /// Sequence number
@@ -56,51 +58,60 @@ pub trait WebsocketHandler: Send + Sync {
     async fn callback(&self, _message: WebsocketEvent) {}
 }
 
+#[async_trait]
+impl<T: WebsocketHandler> WebsocketHandler for Arc<T> {
+    async fn callback(&self, message: WebsocketEvent) {
+        self.as_ref().callback(message).await
+    }
+}
+
 /// Websocket event names.
 #[allow(missing_docs)]
-pub mod websocket_event_types {
-    pub const ADDED_TO_TEAM: &str = "added_to_team";
-    pub const AUTHENTICATION_CHALLENGE: &str = "authentication_challenge";
-    pub const CHANNEL_CONVERTED: &str = "channel_converted";
-    pub const CHANNEL_CREATED: &str = "channel_created";
-    pub const CHANNEL_DELETED: &str = "channel_deleted";
-    pub const CHANNEL_MEMBER_UPDATED: &str = "channel_member_updated";
-    pub const CHANNEL_UPDATED: &str = "channel_updated";
-    pub const CHANNEL_VIEWED: &str = "channel_viewed";
-    pub const CONFIG_CHANGED: &str = "config_changed";
-    pub const DELETE_TEAM: &str = "delete_team";
-    pub const DIRECT_ADDED: &str = "direct_added";
-    pub const EMOJI_ADDED: &str = "emoji_added";
-    pub const EPHEMERAL_MESSAGE: &str = "ephemeral_message";
-    pub const GROUP_ADDED: &str = "group_added";
-    pub const HELLO: &str = "hello";
-    pub const LEAVE_TEAM: &str = "leave_team";
-    pub const LICENSE_CHANGED: &str = "license_changed";
-    pub const MEMBERROLE_UPDATED: &str = "memberrole_updated";
-    pub const NEW_USER: &str = "new_user";
-    pub const PLUGIN_DISABLED: &str = "plugin_disabled";
-    pub const PLUGIN_ENABLED: &str = "plugin_enabled";
-    pub const PLUGIN_STATUSES_CHANGED: &str = "plugin_statuses_changed";
-    pub const POST_DELETED: &str = "post_deleted";
-    pub const POST_EDITED: &str = "post_edited";
-    pub const POST_UNREAD: &str = "post_unread";
-    pub const POSTED: &str = "posted";
-    pub const PREFERENCE_CHANGED: &str = "preference_changed";
-    pub const PREFERENCES_CHANGED: &str = "preferences_changed";
-    pub const PREFERENCES_DELETED: &str = "preferences_deleted";
-    pub const REACTION_ADDED: &str = "reaction_added";
-    pub const REACTION_REMOVED: &str = "reaction_removed";
-    pub const RESPONSE: &str = "response";
-    pub const ROLE_UPDATED: &str = "role_updated";
-    pub const STATUS_CHANGE: &str = "status_change";
-    pub const TYPING: &str = "typing";
-    pub const UPDATE_TEAM: &str = "update_team";
-    pub const USER_ADDED: &str = "user_added";
-    pub const USER_REMOVED: &str = "user_removed";
-    pub const USER_ROLE_UPDATED: &str = "user_role_updated";
-    pub const USER_UPDATED: &str = "user_updated";
-    pub const DIALOG_OPENED: &str = "dialog_opened";
-    pub const THREAD_UPDATED: &str = "thread_updated";
-    pub const THREAD_FOLLOW_CHANGED: &str = "thread_follow_changed";
-    pub const THREAD_READ_CHANGED: &str = "thread_read_changed";
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "event", content = "data", rename_all = "snake_case")]
+pub enum WebsocketEventType {
+    AddedToTeam(Value),
+    AuthenticationChallenge(Value),
+    ChannelConverted(Value),
+    ChannelCreated(Value),
+    ChannelDeleted(Value),
+    ChannelMemberUpdated(Value),
+    ChannelUpdated(Value),
+    ChannelViewed(Value),
+    ConfigChanged(Value),
+    DeleteTeam(Value),
+    DirectAdded(Value),
+    EmojiAdded(Value),
+    EphemeralMessage(Value),
+    GroupAdded(Value),
+    Hello(Value),
+    LeaveTeam(Value),
+    LicenseChanged(Value),
+    MemberroleUpdated(Value),
+    NewUser(Value),
+    PluginDisabled(Value),
+    PluginEnabled(Value),
+    PluginStatusesChanged(Value),
+    PostDeleted(Value),
+    PostEdited(Value),
+    PostUnread(Value),
+    Posted { post: Post, mentions: Vec<String> },
+    PreferenceChanged(Value),
+    PreferencesChanged(Value),
+    PreferencesDeleted(Value),
+    ReactionAdded(Value),
+    ReactionRemoved(Value),
+    Response(Value),
+    RoleUpdated(Value),
+    StatusChange(Value),
+    Typing(Value),
+    UpdateTeam(Value),
+    UserAdded(Value),
+    UserRemoved(Value),
+    UserRoleUpdated(Value),
+    UserUpdated(Value),
+    DialogOpened(Value),
+    ThreadUpdated(Value),
+    ThreadFollowChanged(Value),
+    ThreadReadChanged(Value),
 }

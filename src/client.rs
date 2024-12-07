@@ -75,6 +75,12 @@ pub struct Mattermost {
     pub(crate) ping_interval: std::time::Duration,
 }
 
+impl AsRef<Mattermost> for Mattermost {
+    fn as_ref(&self) -> &Mattermost {
+        self
+    }
+}
+
 impl Mattermost {
     /// Create a new instance of the struct to interact with the instance API.
     ///
@@ -201,7 +207,7 @@ impl Mattermost {
         method: &str,
         endpoint: &str,
         query: Option<&[(&str, &str)]>,
-        body: Option<&str>,
+        body: Option<&[u8]>,
     ) -> Result<T, ApiError> {
         let url = self.endpoint_url(endpoint)?;
         let method = Method::try_from(method)?;
@@ -435,6 +441,63 @@ impl Mattermost {
             None,
         )
         .await
+    }
+
+    /// Upload a single file
+    pub async fn upload_file(
+        &self,
+        channel_id: &str,
+        filename: &str,
+        content: &[u8],
+    ) -> Result<models::FileUploadResponse, ApiError> {
+        self.query(
+            "POST",
+            "files",
+            Some(&[("channel_id", channel_id), ("filename", filename)]),
+            Some(content),
+        )
+        .await
+    }
+
+    /// Create a post
+    pub async fn create_post(&self, post: models::CreatePost) -> Result<models::Post, ApiError> {
+        let body = serde_json::to_string_pretty(&post)?;
+
+        self.query("POST", "posts", None, Some(body.as_bytes()))
+            .await
+    }
+
+    /// Create a reaction
+    pub async fn create_reaction(
+        &self,
+        reaction: &models::Reaction,
+    ) -> Result<models::Reaction, ApiError> {
+        let body = serde_json::to_string_pretty(reaction)?;
+
+        self.query("POST", "reactions", None, Some(body.as_bytes()))
+            .await
+    }
+
+    /// Delete a reaction
+    pub async fn delete_reaction(
+        &self,
+        user_id: &str,
+        post_id: &str,
+        emoji_name: &str,
+    ) -> Result<models::DeleteReactionResponse, ApiError> {
+        self.query(
+            "DELETE",
+            &format!("users/{user_id}/posts/{post_id}/reactions/{emoji_name}"),
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Get a thread
+    pub async fn get_thread(&self, post_id: &str) -> Result<models::Thread, ApiError> {
+        self.query("GET", &format!("posts/{}/thread", post_id), None, None)
+            .await
     }
 
     /// Get information for a team by its name,
