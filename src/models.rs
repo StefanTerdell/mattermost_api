@@ -36,29 +36,29 @@ pub struct Post {
     #[serde(rename = "type")]
     pub post_type: String,
     pub props: Value,
-    pub hashtag: String,
-    pub file_ids: Vec<String>,
+    pub hashtag: Option<String>,
+    pub file_ids: Option<Vec<String>>,
     pub pending_post_id: String,
     pub metadata: Metadata,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Metadata {
-    pub embeds: Vec<Embed>,
-    pub emojis: Vec<Emoji>,
-    pub files: Vec<FileMetadata>,
-    pub images: Value,
-    pub reactions: Vec<Reaction>,
-    pub priority: Priority,
-    pub acknowledgements: Vec<Acknowledgement>,
+    pub embeds: Option<Vec<Embed>>,
+    pub emojis: Option<Vec<Emoji>>,
+    pub files: Option<Vec<FileMetadata>>,
+    pub images: Option<Value>,
+    pub reactions: Option<Vec<Reaction>>,
+    pub priority: Option<Priority>,
+    pub acknowledgements: Option<Vec<Acknowledgement>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Embed {
     #[serde(rename = "type")]
     pub embed_type: String,
-    pub url: String,
-    pub data: Value,
+    pub url: Option<String>,
+    pub data: Option<Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -124,7 +124,7 @@ pub struct Thread {
     pub order: Vec<String>,
     pub posts: HashMap<String, Post>,
     pub next_post_id: String,
-    pub pref_post_id: String,
+    pub prev_post_id: String,
     pub has_next: bool,
 }
 
@@ -185,19 +185,19 @@ pub struct CreatePost {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserNotifyProps {
-    pub email: BoolishFlag,
-    pub push: NotificationFlag,
-    pub desktop: NotificationFlag,
-    pub desktop_sound: BoolishFlag,
-    pub mention_keys: String,
-    pub channel: BoolishFlag,
-    pub first_name: BoolishFlag,
+    pub email: Option<BoolishFlag>,
+    pub push: Option<NotificationFlag>,
+    pub desktop: Option<NotificationFlag>,
+    pub desktop_sound: Option<BoolishFlag>,
+    pub mention_keys: Option<String>,
+    pub channel: Option<BoolishFlag>,
+    pub first_name: Option<BoolishFlag>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Timezone {
-    pub use_automatic_timezone: bool,
+    pub use_automatic_timezone: String,
     pub manual_timezone: String,
     pub automatic_timezone: String,
 }
@@ -212,19 +212,19 @@ pub struct User {
     pub first_name: String,
     pub last_name: String,
     pub email: String,
-    pub email_verified: String,
+    pub email_verified: Option<String>,
     pub auth_service: String,
     pub roles: String,
     pub locale: String,
-    pub notify_props: UserNotifyProps,
-    pub props: Value,
-    pub last_password_update: i64,
-    pub last_picture_update: i64,
-    pub failed_attemps: i64,
-    pub mfa_active: bool,
+    pub notify_props: Option<UserNotifyProps>,
+    pub props: Option<Value>,
+    pub last_password_update: Option<i64>,
+    pub last_picture_update: Option<i64>,
+    pub failed_attemps: Option<i64>,
+    pub mfa_active: Option<bool>,
     pub timezone: Timezone,
     pub terms_of_service_id: Option<String>,
-    pub terms_of_service_create_at: i64,
+    pub terms_of_service_create_at: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -467,6 +467,15 @@ impl Mattermost {
             .await
     }
 
+    /// Get a list of reactions to a post
+    pub async fn get_reactions(
+        &self,
+        post_id: &str,
+    ) -> Result<Option<Vec<models::Reaction>>, ApiError> {
+        self.query("GET", &format!("posts/{post_id}/reactions"), None, None)
+            .await
+    }
+
     /// Create a reaction
     pub async fn create_reaction(
         &self,

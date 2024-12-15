@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::models::Post;
-
 /// Websocket event broadcast information
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebsocketEventBroadcast {
@@ -65,6 +63,23 @@ impl<T: WebsocketHandler> WebsocketHandler for Arc<T> {
     }
 }
 
+/// Represents a channel type, as in the Post websocket event payload
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ChannelType {
+    /// Represents an open channel type
+    #[serde(rename = "O")]
+    Open,
+    /// Represents a direct message channel type
+    #[serde(rename = "D")]
+    DirectMessage,
+    /// Represents a private channel type
+    #[serde(rename = "P")]
+    Private,
+    /// Represents an unspecified channel type
+    #[serde(untagged)]
+    Other(String),
+}
+
 /// Websocket event names.
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize)]
@@ -84,7 +99,10 @@ pub enum WebsocketEventType {
     EmojiAdded(Value),
     EphemeralMessage(Value),
     GroupAdded(Value),
-    Hello(Value),
+    Hello {
+        connection_id: String,
+        server_version: String,
+    },
     LeaveTeam(Value),
     LicenseChanged(Value),
     MemberroleUpdated(Value),
@@ -93,18 +111,33 @@ pub enum WebsocketEventType {
     PluginEnabled(Value),
     PluginStatusesChanged(Value),
     PostDeleted(Value),
-    PostEdited(Value),
+    PostEdited {
+        post: String,
+    },
     PostUnread(Value),
-    Posted { post: Post, mentions: Vec<String> },
+    Posted {
+        channel_display_name: String,
+        channel_name: String,
+        channel_type: ChannelType,
+        mentions: Option<String>,
+        post: String,
+    },
     PreferenceChanged(Value),
     PreferencesChanged(Value),
     PreferencesDeleted(Value),
-    ReactionAdded(Value),
-    ReactionRemoved(Value),
+    ReactionAdded {
+        reaction: String,
+    },
+    ReactionRemoved {
+        reaction: String,
+    },
     Response(Value),
     RoleUpdated(Value),
     StatusChange(Value),
-    Typing(Value),
+    Typing {
+        parent_id: String,
+        user_id: String,
+    },
     UpdateTeam(Value),
     UserAdded(Value),
     UserRemoved(Value),
