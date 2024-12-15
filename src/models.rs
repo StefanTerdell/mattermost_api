@@ -18,7 +18,8 @@ pub struct MattermostError {
     pub message: String,
     pub request_id: String,
     pub status_code: i16,
-    pub is_oauth: bool,
+    pub is_oauth: Option<bool>,
+    pub detailed_error: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
