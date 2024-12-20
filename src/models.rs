@@ -84,9 +84,9 @@ pub struct FileMetadata {
     pub extension: String,
     pub size: usize,
     pub mime_type: String,
-    pub width: usize,
-    pub height: usize,
-    pub has_preview_image: bool,
+    pub width: Option<usize>,
+    pub height: Option<usize>,
+    pub has_preview_image: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -174,6 +174,14 @@ pub struct DeleteReactionResponse {
 }
 
 #[derive(Default, Debug, Serialize)]
+pub struct ExecuteCommand {
+    pub channel_id: String,
+    pub command: String,
+    pub root_id: Option<String>,
+    pub team_id: Option<String>,
+}
+
+#[derive(Default, Debug, Serialize)]
 pub struct CreatePost {
     pub channel_id: String,
     pub message: String,
@@ -182,6 +190,15 @@ pub struct CreatePost {
     pub hashtag: Option<String>,
     pub file_ids: Option<Vec<String>>,
     pub metadata: Option<CreatePostMetadata>,
+}
+
+#[derive(Default, Debug, Serialize)]
+pub struct PatchPost {
+    pub message: Option<String>,
+    pub is_pinned: Option<bool>,
+    pub has_reactions: Option<bool>,
+    pub props: Option<Value>,
+    pub file_ids: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

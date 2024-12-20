@@ -1,6 +1,9 @@
 //! Client struct and functions for interacting with the REST API.
 
-use crate::{models, prelude::*};
+use crate::{
+    models::{self, FileMetadata},
+    prelude::*,
+};
 use async_tungstenite::{tokio::ConnectStream, tungstenite::Message, WebSocketStream};
 use futures_util::{SinkExt, StreamExt};
 use log::{debug, error};
@@ -9,7 +12,7 @@ use reqwest::{
     Client, Method,
 };
 use serde::de::DeserializeOwned;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::time::Duration;
 use tokio::{task::JoinHandle, time::sleep};
 use url::Url;
@@ -459,11 +462,79 @@ impl Mattermost {
         .await
     }
 
+    /// Get the metadata of a file
+    pub async fn get_file_info(&self, file_id: &str) -> Result<FileMetadata, ApiError> {
+        self.query("GET", &format!("files/{file_id}/info"), None, None)
+            .await
+    }
+
+    /// Get the contents of a file
+    pub async fn get_file(&self, file_id: &str) -> Result<Vec<u8>, ApiError> {
+        let url = self.endpoint_url(&format!("files/{file_id}"))?;
+
+        let resp = self
+            .client
+            .get(url.clone())
+            .headers(self.request_headers()?)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            error!(
+                "Got status {} when requesting data from {}",
+                resp.status(),
+                url
+            );
+            let status = resp.status().as_u16();
+            // attempt to get the standard error information out and return that
+            if let Ok(text) = resp.text().await {
+                if let Ok(data) = serde_json::from_str::<MattermostError>(&text) {
+                    return Err(ApiError::MattermostApiError(data));
+                }
+            }
+            // fallback to generic HTTP status code error
+            return Err(ApiError::StatusCodeError(status));
+        }
+
+        Ok(resp.bytes().await?.into_iter().collect())
+    }
+
+    /// Execute a command
+    pub async fn execute(&self, command: models::ExecuteCommand) -> Result<Value, ApiError> {
+        let body = serde_json::to_string_pretty(&command)?;
+
+        self.query("POST", "commands/execute", None, Some(body.as_bytes()))
+            .await
+    }
+
     /// Create a post
     pub async fn create_post(&self, post: models::CreatePost) -> Result<models::Post, ApiError> {
         let body = serde_json::to_string_pretty(&post)?;
 
         self.query("POST", "posts", None, Some(body.as_bytes()))
+            .await
+    }
+
+    /// Patch a post
+    pub async fn patch_post(
+        &self,
+        post_id: &str,
+        post: models::PatchPost,
+    ) -> Result<models::Post, ApiError> {
+        let body = serde_json::to_string_pretty(&post)?;
+
+        self.query(
+            "PUT",
+            &format!("posts/{post_id}/patch"),
+            None,
+            Some(body.as_bytes()),
+        )
+        .await
+    }
+
+    /// Get a post
+    pub async fn get_post(&self, post_id: &str) -> Result<models::Post, ApiError> {
+        self.query("GET", &format!("posts/{post_id}"), None, None)
             .await
     }
 
