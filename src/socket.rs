@@ -1,5 +1,6 @@
 //! Websocket client and trait for interacting with the websocket API.
 
+use crate::models::{Post, Reaction};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -112,24 +113,29 @@ pub enum WebsocketEventType {
     PluginStatusesChanged(Value),
     PostDeleted(Value),
     PostEdited {
-        post: String,
+        #[serde(with = "serde_nested_json")]
+        post: Post,
     },
     PostUnread(Value),
     Posted {
         channel_display_name: String,
         channel_name: String,
         channel_type: ChannelType,
-        mentions: Option<String>,
-        post: String,
+        #[serde(with = "serde_nested_json", default)]
+        mentions: Option<Vec<String>>,
+        #[serde(with = "serde_nested_json")]
+        post: Post,
     },
     PreferenceChanged(Value),
     PreferencesChanged(Value),
     PreferencesDeleted(Value),
     ReactionAdded {
-        reaction: String,
+        #[serde(with = "serde_nested_json")]
+        reaction: Reaction,
     },
     ReactionRemoved {
-        reaction: String,
+        #[serde(with = "serde_nested_json")]
+        reaction: Reaction,
     },
     Response(Value),
     RoleUpdated(Value),
