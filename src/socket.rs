@@ -85,6 +85,7 @@ pub enum ChannelType {
 #[allow(missing_docs)]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum WebsocketEventType {
     AddedToTeam(Value),
     AuthenticationChallenge(Value),
